@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NBA Player Stats Dashboard</title>
+ 
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      color: #222;
+      margin: 0;
+      padding: 30px 40px;
+    }
+ 
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+ 
+    h1 {
+      margin: 0 0 30px;
+    }
+ 
+    #toggle-dark {
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 6px;
+    }
+ 
+    .controls {
+      margin-bottom: 15px;
+    }
+ 
+    .controls input,
+    .controls select {
+      font-size: 11px;
+      padding: 2px;
+    }
+ 
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      font-size: 12px;
+    }
+ 
+    th, td {
+      text-align: left;
+      padding: 8px;
+      border: 1px solid #ddd;
+    }
+ 
+    th {
+      background-color: #f9f9f9;
+      cursor: pointer;
+      user-select: none;
+    }
+ 
+    tbody tr:hover {
+      background-color: #eef4ff;
+    }
+ 
+    tbody tr.selected {
+      background-color: #ffe9a8;
+    }
+ 
+    .bar {
+      height: 4px;
+      margin-top: 4px;
+      background-color: #3b82f6;
+      border-radius: 2px;
+    }
+ 
+    body.dark {
+      background-color: #1e1e1e;
+      color: #eee;
+    }
+ 
+    body.dark table {
+      background-color: #2b2b2b;
+    }
+ 
+    body.dark th {
+      background-color: #333;
+    }
+ 
+    body.dark th,
+    body.dark td {
+      border-color: #555;
+    }
+ 
+    body.dark tbody tr:hover {
+      background-color: #3a4a66;
+    }
+ 
+    body.dark tbody tr.selected {
+      background-color: #6b5a1e;
+    }
+  </style>
+</head>
+<body>
+ 
+  <div class="header">
+    <h1>NBA Player Stats Dashboard</h1>
+    <button id="toggle-dark">Toggle Dark Mode</button>
+  </div>
+ 
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search players...">
+    <select id="team-filter">
+      <option value="All">All</option>
+    </select>
+  </div>
+ 
+  <table id="stats-table">
+    <thead>
+      <tr>
+        <th data-key="name">Name</th>
+        <th data-key="team">Team</th>
+        <th data-key="points">Points</th>
+        <th data-key="rebounds">Rebounds</th>
+        <th data-key="assists">Assists</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+ 
+  <script>
+    const players = [
+      { name: "Joel Embiid",            team: "PHI", points: 33,   rebounds: 10.8, assists: 5.7 },
+      { name: "Jalen Brunson",          team: "NYK", points: 32.4, rebounds: 3.3,  assists: 7.5 },
+      { name: "Shai Gilgeous-Alexander", team: "OKC", points: 30.2, rebounds: 7.2,  assists: 6.4 },
+      { name: "Tyrese Maxey",           team: "PHI", points: 29.8, rebounds: 5.2,  assists: 6.8 },
+      { name: "Donovan Mitchell",       team: "CLE", points: 29.6, rebounds: 5.4,  assists: 4.7 }
+    ];
+ 
+    const tbody      = document.querySelector("#stats-table tbody");
+    const thead      = document.querySelector("#stats-table thead");
+    const searchBox  = document.getElementById("search");
+    const teamFilter = document.getElementById("team-filter");
+    const darkBtn    = document.getElementById("toggle-dark");
+ 
+    let sortKey = null;
+    let sortAsc = true;
+ 
+    const teams = [...new Set(players.map(p => p.team))];
+    teams.forEach(team => {
+      const option = document.createElement("option");
+      option.value = team;
+      option.textContent = team;
+      teamFilter.appendChild(option);
+    });
+ 
+    function renderTable(data) {
+      tbody.innerHTML = "";
+      const maxPoints = Math.max(...players.map(p => p.points));
+ 
+      data.forEach(player => {
+        const row = document.createElement("tr");
+ 
+        ["name", "team", "points", "rebounds", "assists"].forEach(key => {
+          const cell = document.createElement("td");
+          cell.textContent = player[key];
+ 
+          if (key === "points") {
+            const bar = document.createElement("div");
+            bar.className = "bar";
+            bar.style.width = (player.points / maxPoints) * 100 + "%";
+            cell.appendChild(bar);
+          }
+ 
+          row.appendChild(cell);
+        });
+ 
+        tbody.appendChild(row);
+      });
+    }
+ 
+    function updateTable() {
+      const text = searchBox.value.trim().toLowerCase();
+      const team = teamFilter.value;
+ 
+      let result = players.filter(p =>
+        p.name.toLowerCase().includes(text) &&
+        (team === "All" || p.team === team)
+      );
+ 
+      if (sortKey) {
+        result.sort((a, b) => {
+          const x = a[sortKey];
+          const y = b[sortKey];
+          const cmp = typeof x === "number" ? x - y : x.localeCompare(y);
+          return sortAsc ? cmp : -cmp;
+        });
+      }
+ 
+      renderTable(result);
+    }
+ 
+    searchBox.addEventListener("input", updateTable);
+ 
+    teamFilter.addEventListener("change", updateTable);
+ 
+    darkBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+    });
+ 
+    tbody.addEventListener("click", event => {
+      const row = event.target.closest("tr");
+      if (!row) return;
+      row.classList.toggle("selected");
+    });
+ 
+    thead.addEventListener("click", event => {
+      const th = event.target.closest("th");
+      if (!th) return;
+ 
+      const key = th.dataset.key;
+      sortAsc = (sortKey === key) ? !sortAsc : true;
+      sortKey = key;
+      updateTable();
+    });
+ 
+    renderTable(players);
+  </script>
+ 
+</body>
+</html>
+ 
